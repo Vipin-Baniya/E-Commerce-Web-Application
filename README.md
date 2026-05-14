@@ -72,3 +72,15 @@ export DEFAULT_ADMIN_NAME="Admin"
 ```bash
 npm test
 ```
+
+## GitHub Pages
+
+This repository includes a workflow that deploys `public/` to GitHub Pages.
+
+Because GitHub Pages is static hosting, you must run the backend API separately (for example on Render/Railway/another server), then point the frontend to that API base URL.
+
+You can configure the API base URL in any one of these ways:
+
+- Query string (quickest): `?apiBase=https://your-api.example.com`
+- Browser local storage key: `API_BASE_URL`
+- Global variable before app script runs: `window.API_BASE_URL`
