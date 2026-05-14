@@ -100,7 +100,8 @@ async function findProductById(productId) {
     if (!mongoose.Types.ObjectId.isValid(productId)) {
       return null;
     }
-    return Product.findById(productId);
+    const safeProductId = new mongoose.Types.ObjectId(productId);
+    return Product.findById(safeProductId);
   }
   return memory.products.find((product) => product._id === productId) || null;
 }
@@ -196,7 +197,8 @@ async function findOrderById(orderId) {
     if (!mongoose.Types.ObjectId.isValid(orderId)) {
       return null;
     }
-    return Order.findById(orderId);
+    const safeOrderId = new mongoose.Types.ObjectId(orderId);
+    return Order.findById(safeOrderId);
   }
   return memory.orders.find((order) => order._id === orderId) || null;
 }
@@ -206,7 +208,9 @@ async function updateOrderStatus(orderId, status) {
     if (!mongoose.Types.ObjectId.isValid(orderId)) {
       return null;
     }
-    return Order.findByIdAndUpdate(orderId, { status }, { new: true });
+    const safeOrderId = new mongoose.Types.ObjectId(orderId);
+    await Order.updateOne({ _id: safeOrderId }, { $set: { status } });
+    return Order.findById(safeOrderId);
   }
 
   const order = memory.orders.find((item) => item._id === orderId);
