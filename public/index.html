@@ -92,12 +92,12 @@
       }
 
       if (RAW_API_BASE_URL && !API_BASE_URL) {
-        showConfigError(`Invalid API base URL "${RAW_API_BASE_URL}". Use a full http(s) URL, e.g. https://your-api.example.com`);
+        showConfigError(`Invalid API base URL "${RAW_API_BASE_URL}". Use a full http(s) URL, e.g. https://api.yourapp.com`);
       }
 
       function apiUrl(path) {
         if (!API_BASE_URL && IS_GITHUB_PAGES) {
-          showConfigError('Set API base URL via ?apiBase=, localStorage(API_BASE_URL), or window.API_BASE_URL.');
+          showConfigError("Set API base URL via ?apiBase=, localStorage.setItem('API_BASE_URL', 'https://api.yourapp.com'), or window.API_BASE_URL.");
         }
         return `${API_BASE_URL}${path}`;
       }
