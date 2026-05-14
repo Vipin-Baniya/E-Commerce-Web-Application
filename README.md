@@ -84,3 +84,5 @@ You can configure the API base URL in any one of these ways:
 - Query string (quickest): `?apiBase=https://your-api.example.com`
 - Browser local storage key: `API_BASE_URL`
 - Global variable before app script runs: `window.API_BASE_URL`
+
+Use a full `http://` or `https://` URL. Trailing slashes are automatically removed.
