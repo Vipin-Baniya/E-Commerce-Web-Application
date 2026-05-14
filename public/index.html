@@ -252,7 +252,7 @@
       <div class="topbar-row">
         <div class="brand">flipkart<small>Explore Plus Clone</small></div>
         <input class="search" placeholder="Search for products, brands and more" />
-        <button class="top-btn login-btn" onclick="focusLoginForm()">Login</button>
+        <button class="top-btn login-btn" onclick="focusEmailInput()">Login</button>
         <button class="top-btn cart-btn" onclick="loadCart()">Cart</button>
       </div>
     </header>
@@ -386,7 +386,7 @@
         status.style.color = isError ? '#d32f2f' : '#388e3c';
       }
 
-      function focusLoginForm() {
+      function focusEmailInput() {
         const emailInput = document.getElementById('email');
         if (!emailInput) return;
         emailInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
