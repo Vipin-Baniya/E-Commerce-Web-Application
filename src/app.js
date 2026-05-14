@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
+const rateLimit = require('express-rate-limit');
 const path = require('path');
 const { authenticate, authorize, issueToken } = require('./auth');
 const store = require('./store');
@@ -11,11 +12,25 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 200,
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok' });
 });
 
-app.post('/api/auth/register', async (req, res) => {
+app.post('/api/auth/register', authLimiter, async (req, res) => {
   const { name, email, password } = req.body;
 
   if (!name || !email || !password) {
@@ -40,7 +55,7 @@ app.post('/api/auth/register', async (req, res) => {
   });
 });
 
-app.post('/api/auth/login', async (req, res) => {
+app.post('/api/auth/login', authLimiter, async (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) {
     return res.status(400).json({ message: 'email and password are required.' });
@@ -62,7 +77,7 @@ app.get('/api/products', async (_req, res) => {
   return res.json(products);
 });
 
-app.post('/api/products', authenticate, authorize('admin'), async (req, res) => {
+app.post('/api/products', apiLimiter, authenticate, authorize('admin'), async (req, res) => {
   const { name, description, price, stock } = req.body;
 
   if (!name || typeof price !== 'number' || typeof stock !== 'number') {
@@ -79,12 +94,12 @@ app.post('/api/products', authenticate, authorize('admin'), async (req, res) => 
   return res.status(201).json(product);
 });
 
-app.get('/api/cart', authenticate, async (req, res) => {
+app.get('/api/cart', apiLimiter, authenticate, async (req, res) => {
   const cart = await store.getCartByUserId(req.user.userId);
   return res.json(cart || { user: req.user.userId, items: [] });
 });
 
-app.post('/api/cart/items', authenticate, async (req, res) => {
+app.post('/api/cart/items', apiLimiter, authenticate, async (req, res) => {
   const { productId, quantity = 1 } = req.body;
 
   if (!productId || quantity < 1) {
@@ -111,7 +126,7 @@ app.post('/api/cart/items', authenticate, async (req, res) => {
   return res.status(201).json(updatedCart);
 });
 
-app.post('/api/cart/checkout', authenticate, async (req, res) => {
+app.post('/api/cart/checkout', apiLimiter, authenticate, async (req, res) => {
   const cart = await store.getCartByUserId(req.user.userId);
 
   if (!cart || cart.items.length === 0) {
@@ -153,12 +168,12 @@ app.post('/api/cart/checkout', authenticate, async (req, res) => {
   return res.status(201).json(order);
 });
 
-app.get('/api/orders', authenticate, async (req, res) => {
+app.get('/api/orders', apiLimiter, authenticate, async (req, res) => {
   const orders = await store.listOrders(req.user.userId, req.user.role);
   return res.json(orders);
 });
 
-app.get('/api/orders/:orderId', authenticate, async (req, res) => {
+app.get('/api/orders/:orderId', apiLimiter, authenticate, async (req, res) => {
   const order = await store.findOrderById(req.params.orderId);
   if (!order) {
     return res.status(404).json({ message: 'Order not found.' });
@@ -171,7 +186,7 @@ app.get('/api/orders/:orderId', authenticate, async (req, res) => {
   return res.json(order);
 });
 
-app.patch('/api/orders/:orderId/status', authenticate, authorize('admin'), async (req, res) => {
+app.patch('/api/orders/:orderId/status', apiLimiter, authenticate, authorize('admin'), async (req, res) => {
   const { status } = req.body;
   const allowed = new Set(['placed', 'processing', 'shipped', 'delivered', 'cancelled']);
 

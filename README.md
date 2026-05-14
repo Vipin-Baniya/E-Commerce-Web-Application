@@ -7,6 +7,7 @@ A basic full-stack online store that includes:
 - User login with role-based access (`admin` / `user`)
 - Backend APIs for product and order management
 - Database integration with MongoDB (plus in-memory mode for local quick start)
+- API rate limiting on auth and protected endpoints
 
 ## Tech Stack
 

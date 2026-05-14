@@ -1,4 +1,5 @@
 const crypto = require('crypto');
+const mongoose = require('mongoose');
 const { User, Product, Cart, Order } = require('./models');
 
 const DATA_SOURCE = (process.env.DATA_SOURCE || 'memory').toLowerCase();
@@ -96,6 +97,9 @@ async function createProduct({ name, description, price, stock }) {
 
 async function findProductById(productId) {
   if (isMongo) {
+    if (!mongoose.Types.ObjectId.isValid(productId)) {
+      return null;
+    }
     return Product.findById(productId);
   }
   return memory.products.find((product) => product._id === productId) || null;
@@ -189,6 +193,9 @@ async function listOrders(userId, role) {
 
 async function findOrderById(orderId) {
   if (isMongo) {
+    if (!mongoose.Types.ObjectId.isValid(orderId)) {
+      return null;
+    }
     return Order.findById(orderId);
   }
   return memory.orders.find((order) => order._id === orderId) || null;
@@ -196,6 +203,9 @@ async function findOrderById(orderId) {
 
 async function updateOrderStatus(orderId, status) {
   if (isMongo) {
+    if (!mongoose.Types.ObjectId.isValid(orderId)) {
+      return null;
+    }
     return Order.findByIdAndUpdate(orderId, { status }, { new: true });
   }
 
