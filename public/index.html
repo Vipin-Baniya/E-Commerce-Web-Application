@@ -53,7 +53,18 @@
 
     <script>
       const state = { token: '', role: '' };
-      const API_BASE_URL = window.API_BASE_URL || localStorage.getItem('API_BASE_URL') || new URLSearchParams(window.location.search).get('apiBase') || '';
+      function getApiBaseUrl() {
+        const fromGlobal = window.API_BASE_URL;
+        if (fromGlobal) return fromGlobal;
+
+        const fromStorage = localStorage.getItem('API_BASE_URL');
+        if (fromStorage) return fromStorage;
+
+        const params = new URLSearchParams(window.location.search);
+        return params.get('apiBase') || '';
+      }
+
+      const API_BASE_URL = getApiBaseUrl();
 
       function apiUrl(path) {
         return `${API_BASE_URL}${path}`;
