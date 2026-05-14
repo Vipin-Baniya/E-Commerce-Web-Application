@@ -53,13 +53,64 @@
 
     <script>
       const state = { token: '', role: '' };
+      function getApiBaseUrl() {
+        const fromGlobal = window.API_BASE_URL;
+        if (fromGlobal) return fromGlobal;
+
+        const fromStorage = localStorage.getItem('API_BASE_URL');
+        if (fromStorage) return fromStorage;
+
+        const params = new URLSearchParams(window.location.search);
+        return params.get('apiBase') || '';
+      }
+
+      function normalizeApiBaseUrl(rawBaseUrl) {
+        if (!rawBaseUrl) return '';
+
+        try {
+          const parsed = new URL(rawBaseUrl);
+          if (!['http:', 'https:'].includes(parsed.protocol)) {
+            return '';
+          }
+          return rawBaseUrl.replace(/\/+$/, '');
+        } catch {
+          return '';
+        }
+      }
+
+      const RAW_API_BASE_URL = getApiBaseUrl();
+      const API_BASE_URL = normalizeApiBaseUrl(RAW_API_BASE_URL);
+      const IS_GITHUB_PAGES = window.location.hostname.endsWith('github.io');
+      let lastConfigErrorMessage = '';
+
+      function showConfigError(message) {
+        if (lastConfigErrorMessage === message) return;
+        const status = document.getElementById('authStatus');
+        status.textContent = message;
+        status.style.color = 'red';
+        lastConfigErrorMessage = message;
+      }
+
+      if (RAW_API_BASE_URL && !API_BASE_URL) {
+        showConfigError(`Invalid API base URL "${RAW_API_BASE_URL}". Use a full http(s) URL, e.g. https://api.yourapp.com`);
+      }
+
+      function apiUrl(path) {
+        if (!API_BASE_URL && IS_GITHUB_PAGES) {
+          showConfigError('Set API base URL via ?apiBase=..., localStorage key API_BASE_URL, or window.API_BASE_URL.');
+          return null;
+        }
+        return `${API_BASE_URL}${path}`;
+      }
 
       function authHeaders() {
         return state.token ? { Authorization: `Bearer ${state.token}` } : {};
       }
 
       async function register() {
-        const res = await fetch('/api/auth/register', {
+        const url = apiUrl('/api/auth/register');
+        if (!url) return;
+        const res = await fetch(url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -72,7 +123,9 @@
       }
 
       async function login() {
-        const res = await fetch('/api/auth/login', {
+        const url = apiUrl('/api/auth/login');
+        if (!url) return;
+        const res = await fetch(url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -97,7 +150,9 @@
       }
 
       async function createProduct() {
-        const res = await fetch('/api/products', {
+        const url = apiUrl('/api/products');
+        if (!url) return;
+        const res = await fetch(url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', ...authHeaders() },
           body: JSON.stringify({
@@ -118,7 +173,9 @@
       }
 
       async function loadProducts() {
-        const res = await fetch('/api/products');
+        const url = apiUrl('/api/products');
+        if (!url) return;
+        const res = await fetch(url);
         const products = await res.json();
 
         const wrapper = document.getElementById('products');
@@ -138,7 +195,9 @@
       }
 
       async function addToCart(productId) {
-        const res = await fetch('/api/cart/items', {
+        const url = apiUrl('/api/cart/items');
+        if (!url) return;
+        const res = await fetch(url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', ...authHeaders() },
           body: JSON.stringify({ productId, quantity: 1 })
@@ -154,13 +213,17 @@
       }
 
       async function loadCart() {
-        const res = await fetch('/api/cart', { headers: authHeaders() });
+        const url = apiUrl('/api/cart');
+        if (!url) return;
+        const res = await fetch(url, { headers: authHeaders() });
         const cart = await res.json();
         document.getElementById('cart').textContent = JSON.stringify(cart, null, 2);
       }
 
       async function checkout() {
-        const res = await fetch('/api/cart/checkout', {
+        const url = apiUrl('/api/cart/checkout');
+        if (!url) return;
+        const res = await fetch(url, {
           method: 'POST',
           headers: authHeaders()
         });
@@ -175,7 +238,9 @@
       }
 
       async function loadOrders() {
-        const res = await fetch('/api/orders', { headers: authHeaders() });
+        const url = apiUrl('/api/orders');
+        if (!url) return;
+        const res = await fetch(url, { headers: authHeaders() });
         const orders = await res.json();
         document.getElementById('orders').textContent = JSON.stringify(orders, null, 2);
       }
