@@ -15,6 +15,26 @@
         --success: #388e3c;
       }
 
+      body[data-theme='myntra'] {
+        --primary: #ff3f6c;
+        --accent: #ffd5e0;
+        --bg: #fff6f8;
+        --card: #ffffff;
+        --text: #1f1f1f;
+        --muted: #6c6c6c;
+        --success: #2e7d32;
+      }
+
+      body[data-theme='dark'] {
+        --primary: #111827;
+        --accent: #374151;
+        --bg: #030712;
+        --card: #111827;
+        --text: #f3f4f6;
+        --muted: #9ca3af;
+        --success: #34d399;
+      }
+
       * {
         box-sizing: border-box;
       }
@@ -80,6 +100,12 @@
         background: transparent;
         color: #fff;
         border: 1px solid rgba(255, 255, 255, 0.6);
+      }
+
+      .theme-btn {
+        background: rgba(255, 255, 255, 0.15);
+        color: #fff;
+        border: 1px solid rgba(255, 255, 255, 0.35);
       }
 
       .layout {
@@ -205,6 +231,12 @@
         font-size: 0.86rem;
       }
 
+      .search-summary {
+        margin: 0 0 8px;
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+
       .price {
         font-weight: 700;
       }
@@ -251,7 +283,10 @@
     <header class="topbar">
       <div class="topbar-row">
         <div class="brand">flipkart<small>Explore Plus Clone</small></div>
-        <input class="search" placeholder="Search for products, brands and more" />
+        <input id="searchInput" class="search" placeholder="Search for products, brands and more" oninput="handleSearch()" />
+        <button class="top-btn theme-btn" onclick="setTheme('flipkart')">Flipkart</button>
+        <button class="top-btn theme-btn" onclick="setTheme('myntra')">Myntra</button>
+        <button class="top-btn theme-btn" onclick="setTheme('dark')">Dark</button>
         <button class="top-btn login-btn" onclick="focusEmailInput()">Login</button>
         <button class="top-btn cart-btn" onclick="loadCart()">Cart</button>
       </div>
@@ -299,6 +334,7 @@
             <h2>Products</h2>
             <button class="action alt" onclick="loadProducts()">Refresh Products</button>
           </div>
+          <p id="searchSummary" class="search-summary"></p>
           <div id="products" class="products-grid"></div>
         </section>
 
@@ -324,7 +360,7 @@
     </main>
 
     <script>
-      const state = { token: '', role: '' };
+      const state = { token: '', role: '', products: [], searchQuery: '' };
 
       function getApiBaseUrl() {
         const fromGlobal = window.API_BASE_URL;
@@ -380,10 +416,37 @@
         return state.token ? { Authorization: `Bearer ${state.token}` } : {};
       }
 
+      function setTheme(theme) {
+        const allowedThemes = new Set(['flipkart', 'myntra', 'dark']);
+        const selectedTheme = allowedThemes.has(theme) ? theme : 'flipkart';
+        document.body.setAttribute('data-theme', selectedTheme === 'flipkart' ? '' : selectedTheme);
+        localStorage.setItem('THEME', selectedTheme);
+        setStatus(`Theme switched to ${selectedTheme}.`);
+      }
+
+      function loadTheme() {
+        const saved = localStorage.getItem('THEME') || 'flipkart';
+        setTheme(saved);
+      }
+
       function setStatus(message, isError = false) {
         const status = document.getElementById('authStatus');
         status.textContent = message;
         status.style.color = isError ? '#d32f2f' : '#388e3c';
+      }
+
+      function requireAuth(actionName) {
+        if (state.token) return true;
+        setStatus(`Please login to ${actionName}.`, true);
+        return false;
+      }
+
+      async function parseJsonSafely(res) {
+        try {
+          return await res.json();
+        } catch {
+          return {};
+        }
       }
 
       function focusEmailInput() {
@@ -423,7 +486,7 @@
       }
 
       async function handleAuthResponse(res) {
-        const data = await res.json();
+        const data = await parseJsonSafely(res);
         if (!res.ok) {
           setStatus(data.message || 'Authentication failed', true);
           return;
@@ -436,38 +499,60 @@
       }
 
       async function createProduct() {
+        if (!requireAuth('create products')) return;
         const url = apiUrl('/api/products');
         if (!url) return;
+        const name = document.getElementById('productName').value.trim();
+        const description = document.getElementById('productDescription').value.trim();
+        const price = Number(document.getElementById('productPrice').value);
+        const stock = Number(document.getElementById('productStock').value);
+
+        if (!name || Number.isNaN(price) || Number.isNaN(stock) || price < 0 || stock < 0) {
+          setStatus('Enter valid product name, price and stock values.', true);
+          return;
+        }
+
         const res = await fetch(url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', ...authHeaders() },
           body: JSON.stringify({
-            name: document.getElementById('productName').value,
-            description: document.getElementById('productDescription').value,
-            price: Number(document.getElementById('productPrice').value),
-            stock: Number(document.getElementById('productStock').value)
+            name,
+            description,
+            price,
+            stock
           })
         });
 
         if (!res.ok) {
-          const data = await res.json();
-          alert(data.message);
+          const data = await parseJsonSafely(res);
+          setStatus(data.message || 'Failed to create product.', true);
           return;
         }
 
+        setStatus('Product created successfully.');
         await loadProducts();
       }
 
-      async function loadProducts() {
-        const url = apiUrl('/api/products');
-        if (!url) return;
-        const res = await fetch(url);
-        const products = await res.json();
-
+      function renderProducts() {
         const wrapper = document.getElementById('products');
         wrapper.innerHTML = '';
+        const search = state.searchQuery.trim().toLowerCase();
+        const visibleProducts = state.products.filter((product) => {
+          if (!search) return true;
+          const text = `${product.name} ${product.description || ''}`.toLowerCase();
+          return text.includes(search);
+        });
 
-        for (const product of products) {
+        const summary = document.getElementById('searchSummary');
+        if (!state.products.length) {
+          summary.textContent = 'No products yet.';
+        } else if (search) {
+          summary.textContent = `Showing ${visibleProducts.length} of ${state.products.length} products for "${state.searchQuery}".`;
+        } else {
+          summary.textContent = `Showing all ${state.products.length} products.`;
+        }
+
+        for (const product of visibleProducts) {
           const item = document.createElement('div');
           item.className = 'product';
 
@@ -494,9 +579,35 @@
           item.append(name, desc, price, stock, addButton);
           wrapper.appendChild(item);
         }
+
+        if (!visibleProducts.length && state.products.length) {
+          const empty = document.createElement('p');
+          empty.className = 'meta';
+          empty.textContent = 'No products match your search.';
+          wrapper.appendChild(empty);
+        }
+      }
+
+      function handleSearch() {
+        state.searchQuery = document.getElementById('searchInput').value;
+        renderProducts();
+      }
+
+      async function loadProducts() {
+        const url = apiUrl('/api/products');
+        if (!url) return;
+        const res = await fetch(url);
+        const products = await parseJsonSafely(res);
+        if (!res.ok || !Array.isArray(products)) {
+          setStatus('Unable to load products right now.', true);
+          return;
+        }
+        state.products = products;
+        renderProducts();
       }
 
       async function addToCart(productId) {
+        if (!requireAuth('add items to cart')) return;
         const url = apiUrl('/api/cart/items');
         if (!url) return;
         const res = await fetch(url, {
@@ -506,47 +617,64 @@
         });
 
         if (!res.ok) {
-          const data = await res.json();
-          alert(data.message);
+          const data = await parseJsonSafely(res);
+          setStatus(data.message || 'Could not add item to cart.', true);
           return;
         }
 
+        setStatus('Item added to cart.');
         await loadCart();
       }
 
       async function loadCart() {
+        if (!requireAuth('view your cart')) return;
         const url = apiUrl('/api/cart');
         if (!url) return;
         const res = await fetch(url, { headers: authHeaders() });
-        const cart = await res.json();
+        const cart = await parseJsonSafely(res);
+        if (!res.ok) {
+          setStatus(cart.message || 'Could not load cart.', true);
+          return;
+        }
         document.getElementById('cart').textContent = JSON.stringify(cart, null, 2);
+        document.getElementById('cart').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        setStatus('Cart loaded.');
       }
 
       async function checkout() {
+        if (!requireAuth('checkout')) return;
         const url = apiUrl('/api/cart/checkout');
         if (!url) return;
         const res = await fetch(url, {
           method: 'POST',
           headers: authHeaders()
         });
-        const data = await res.json();
+        const data = await parseJsonSafely(res);
         if (!res.ok) {
-          alert(data.message);
+          setStatus(data.message || 'Checkout failed.', true);
           return;
         }
 
         await loadCart();
         await loadOrders();
+        setStatus('Checkout completed and order placed.');
       }
 
       async function loadOrders() {
+        if (!requireAuth('view your orders')) return;
         const url = apiUrl('/api/orders');
         if (!url) return;
         const res = await fetch(url, { headers: authHeaders() });
-        const orders = await res.json();
+        const orders = await parseJsonSafely(res);
+        if (!res.ok) {
+          setStatus(orders.message || 'Could not load orders.', true);
+          return;
+        }
         document.getElementById('orders').textContent = JSON.stringify(orders, null, 2);
+        setStatus('Orders loaded.');
       }
 
+      loadTheme();
       loadProducts();
     </script>
   </body>
