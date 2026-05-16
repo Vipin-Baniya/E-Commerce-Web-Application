@@ -284,7 +284,7 @@
       <div class="topbar-row">
         <div class="brand">flipkart<small>Explore Plus Clone</small></div>
         <input id="searchInput" class="search" placeholder="Search for products, brands and more" aria-label="Search for products, brands and more" oninput="handleSearch()" />
-        <button id="themeToggle" class="top-btn theme-btn" onclick="cycleTheme()">Theme</button>
+        <button id="themeToggle" class="top-btn theme-btn" onclick="cycleTheme()" aria-label="Cycle through themes">Theme</button>
         <button class="top-btn login-btn" onclick="focusEmailInput()">Login</button>
         <button class="top-btn cart-btn" onclick="loadCart()">Cart</button>
       </div>
@@ -423,6 +423,7 @@
         if (!themeButton) return;
         const formattedTheme = theme.charAt(0).toUpperCase() + theme.slice(1);
         themeButton.textContent = `Theme: ${formattedTheme}`;
+        themeButton.setAttribute('aria-label', `Current theme is ${formattedTheme}. Click to cycle theme.`);
       }
 
       function setTheme(theme, { silent = false } = {}) {
@@ -522,7 +523,9 @@
           return;
         }
 
-        if (!data?.token || !data?.user) {
+        const hasValidToken = typeof data?.token === 'string' && data.token.trim().length > 0;
+        const hasValidUser = data?.user && typeof data.user === 'object' && typeof data.user.email === 'string' && typeof data.user.role === 'string';
+        if (!hasValidToken || !hasValidUser) {
           setStatus('Authentication response was invalid.', true);
           return;
         }
