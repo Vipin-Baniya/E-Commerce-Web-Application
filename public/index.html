@@ -334,7 +334,7 @@
             <h2>Products</h2>
             <button class="action alt" onclick="loadProducts()">Refresh Products</button>
           </div>
-          <p id="searchSummary" class="search-summary"></p>
+          <p id="searchSummary" class="search-summary" aria-live="polite"></p>
           <div id="products" class="products-grid"></div>
         </section>
 
@@ -361,6 +361,7 @@
 
     <script>
       const state = { token: '', role: '', products: [], searchQuery: '' };
+      let searchDebounceId = null;
 
       function getApiBaseUrl() {
         const fromGlobal = window.API_BASE_URL;
@@ -511,8 +512,16 @@
         const price = Number(document.getElementById('productPrice').value);
         const stock = Number(document.getElementById('productStock').value);
 
-        if (!name || Number.isNaN(price) || Number.isNaN(stock) || price < 0 || stock < 0) {
-          setStatus('Enter valid product name, price and stock values.', true);
+        if (!name) {
+          setStatus('Product name is required.', true);
+          return;
+        }
+        if (Number.isNaN(price) || price < 0) {
+          setStatus('Price must be a non-negative number.', true);
+          return;
+        }
+        if (Number.isNaN(stock) || stock < 0) {
+          setStatus('Stock must be a non-negative number.', true);
           return;
         }
 
@@ -551,7 +560,7 @@
         if (!state.products.length) {
           summary.textContent = 'No products yet.';
         } else if (search) {
-          summary.textContent = `Showing ${visibleProducts.length} of ${state.products.length} products for "${state.searchQuery}".`;
+          summary.textContent = `Showing ${visibleProducts.length} of ${state.products.length} products for "${search}".`;
         } else {
           summary.textContent = `Showing all ${state.products.length} products.`;
         }
@@ -593,8 +602,12 @@
       }
 
       function handleSearch() {
-        state.searchQuery = document.getElementById('searchInput').value.trim();
-        renderProducts();
+        const nextQuery = document.getElementById('searchInput').value.trim();
+        clearTimeout(searchDebounceId);
+        searchDebounceId = setTimeout(() => {
+          state.searchQuery = nextQuery;
+          renderProducts();
+        }, 120);
       }
 
       async function loadProducts() {
@@ -647,8 +660,6 @@
         const cartElement = document.getElementById('cart');
         if (cartElement) {
           cartElement.textContent = JSON.stringify(cart, null, 2);
-        }
-        if (cartElement) {
           cartElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
         setStatus('Cart loaded.');
