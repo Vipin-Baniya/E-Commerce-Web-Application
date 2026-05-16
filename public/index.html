@@ -475,7 +475,8 @@
           const res = await fetch(url, options);
           const data = await parseJsonSafely(res);
           return { res, data };
-        } catch {
+        } catch (error) {
+          console.error('API request failed:', error);
           setStatus('Unable to connect to the API server. Check backend/API base URL and try again.', true);
           return null;
         }
@@ -517,11 +518,11 @@
 
       async function handleAuthResponse(res, data) {
         if (!res.ok) {
-          setStatus((data && data.message) || 'Authentication failed', true);
+          setStatus(data?.message || 'Authentication failed', true);
           return;
         }
 
-        if (!data || !data.token || !data.user) {
+        if (!data?.token || !data?.user) {
           setStatus('Authentication response was invalid.', true);
           return;
         }
@@ -565,7 +566,7 @@
         if (!result) return;
 
         if (!result.res.ok) {
-          setStatus((result.data && result.data.message) || 'Failed to create product.', true);
+          setStatus(result.data?.message || 'Failed to create product.', true);
           return;
         }
 
@@ -663,7 +664,7 @@
         if (!result) return;
 
         if (!result.res.ok) {
-          setStatus((result.data && result.data.message) || 'Could not add item to cart.', true);
+          setStatus(result.data?.message || 'Could not add item to cart.', true);
           return;
         }
 
@@ -697,7 +698,7 @@
         if (!result) return;
         const data = result.data;
         if (!result.res.ok) {
-          setStatus((data && data.message) || 'Checkout failed.', true);
+          setStatus(data?.message || 'Checkout failed.', true);
           return;
         }
 
