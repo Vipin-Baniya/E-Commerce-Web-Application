@@ -283,7 +283,7 @@
     <header class="topbar">
       <div class="topbar-row">
         <div class="brand">flipkart<small>Explore Plus Clone</small></div>
-        <input id="searchInput" class="search" placeholder="Search for products, brands and more" oninput="handleSearch()" />
+        <input id="searchInput" class="search" placeholder="Search for products, brands and more" aria-label="Search for products, brands and more" oninput="handleSearch()" />
         <button class="top-btn theme-btn" onclick="setTheme('flipkart')">Flipkart</button>
         <button class="top-btn theme-btn" onclick="setTheme('myntra')">Myntra</button>
         <button class="top-btn theme-btn" onclick="setTheme('dark')">Dark</button>
@@ -420,7 +420,7 @@
 
       function setTheme(theme, { silent = false } = {}) {
         const selectedTheme = allowedThemes.has(theme) ? theme : 'flipkart';
-        document.body.setAttribute('data-theme', selectedTheme === 'flipkart' ? '' : selectedTheme);
+        document.body.setAttribute('data-theme', selectedTheme);
         localStorage.setItem('THEME', selectedTheme);
         if (!silent) {
           setStatus(`Theme switched to ${selectedTheme}.`);
@@ -607,7 +607,7 @@
           return;
         }
         if (!Array.isArray(products)) {
-          setStatus('Product service returned an invalid response format.', true);
+          setStatus('Unable to display products. Please try again later.', true);
           return;
         }
         state.products = products;
@@ -644,8 +644,10 @@
           setStatus((cart && cart.message) || 'Could not load cart.', true);
           return;
         }
-        document.getElementById('cart').textContent = JSON.stringify(cart, null, 2);
         const cartElement = document.getElementById('cart');
+        if (cartElement) {
+          cartElement.textContent = JSON.stringify(cart, null, 2);
+        }
         if (cartElement) {
           cartElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
