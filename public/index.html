@@ -416,17 +416,21 @@
         return state.token ? { Authorization: `Bearer ${state.token}` } : {};
       }
 
-      function setTheme(theme) {
-        const allowedThemes = new Set(['flipkart', 'myntra', 'dark']);
+      const allowedThemes = new Set(['flipkart', 'myntra', 'dark']);
+
+      function setTheme(theme, { silent = false } = {}) {
         const selectedTheme = allowedThemes.has(theme) ? theme : 'flipkart';
         document.body.setAttribute('data-theme', selectedTheme === 'flipkart' ? '' : selectedTheme);
         localStorage.setItem('THEME', selectedTheme);
-        setStatus(`Theme switched to ${selectedTheme}.`);
+        if (!silent) {
+          setStatus(`Theme switched to ${selectedTheme}.`);
+        }
       }
 
       function loadTheme() {
-        const saved = localStorage.getItem('THEME') || 'flipkart';
-        setTheme(saved);
+        const savedTheme = localStorage.getItem('THEME');
+        const selectedTheme = allowedThemes.has(savedTheme) ? savedTheme : 'flipkart';
+        setTheme(selectedTheme, { silent: true });
       }
 
       function setStatus(message, isError = false) {
@@ -445,7 +449,7 @@
         try {
           return await res.json();
         } catch {
-          return {};
+          return null;
         }
       }
 
@@ -589,7 +593,7 @@
       }
 
       function handleSearch() {
-        state.searchQuery = document.getElementById('searchInput').value;
+        state.searchQuery = document.getElementById('searchInput').value.trim();
         renderProducts();
       }
 
@@ -598,8 +602,12 @@
         if (!url) return;
         const res = await fetch(url);
         const products = await parseJsonSafely(res);
-        if (!res.ok || !Array.isArray(products)) {
-          setStatus('Unable to load products right now.', true);
+        if (!res.ok) {
+          setStatus((products && products.message) || 'Unable to load products right now.', true);
+          return;
+        }
+        if (!Array.isArray(products)) {
+          setStatus('Product service returned an invalid response format.', true);
           return;
         }
         state.products = products;
@@ -633,11 +641,14 @@
         const res = await fetch(url, { headers: authHeaders() });
         const cart = await parseJsonSafely(res);
         if (!res.ok) {
-          setStatus(cart.message || 'Could not load cart.', true);
+          setStatus((cart && cart.message) || 'Could not load cart.', true);
           return;
         }
         document.getElementById('cart').textContent = JSON.stringify(cart, null, 2);
-        document.getElementById('cart').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        const cartElement = document.getElementById('cart');
+        if (cartElement) {
+          cartElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
         setStatus('Cart loaded.');
       }
 
@@ -667,7 +678,7 @@
         const res = await fetch(url, { headers: authHeaders() });
         const orders = await parseJsonSafely(res);
         if (!res.ok) {
-          setStatus(orders.message || 'Could not load orders.', true);
+          setStatus((orders && orders.message) || 'Could not load orders.', true);
           return;
         }
         document.getElementById('orders').textContent = JSON.stringify(orders, null, 2);
